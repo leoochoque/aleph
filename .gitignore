@@ -1,0 +1,11 @@
+.vscode
+aleph-vscode
+aleph
+ANFD.al
+lex.yy.c
+miprimerprog.al
+myfunction.al
+parser.tab.c
+parser.tab.h
+test.al
+testaleph.al
