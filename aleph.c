@@ -173,13 +173,18 @@ struct ast *newlambda(struct syml *symlist, struct ast * exp){
 
 tData callfunc(struct fncall* a){
     struct symbol *sym = a->s;
-    struct expl* explist = a->explist; //args actuales
+    struct expl* explist = a->explist; 
     struct ast* body = sym->bodyfn;
-    struct syml* params = sym->params; //args formales
+    struct syml* params = sym->params; 
+    
+    // Puntero auxiliar para no perder el inicio de la lista de parámetros
+    struct syml* params_iter; 
+
     tData *oldval, *newval, ret;
     int i;
     int nargs;
     
+    // 1. Determinar de dónde sacar el cuerpo y los parámetros
     if(!body && sym->value && returnType(sym->value) == FUN){
         body = sym->value->lambdafn.bodyfn;
         params = sym->value->lambdafn.params;
@@ -190,7 +195,9 @@ tData callfunc(struct fncall* a){
         exit(1);
     }
    
-    for(nargs = 0; params; params = params->next)
+    // Contar argumentos
+    params_iter = params; // Usamos un iterador auxiliar
+    for(nargs = 0; params_iter; params_iter = params_iter->next)
         nargs++;
 
     oldval = malloc(nargs*sizeof(tData));
@@ -198,8 +205,10 @@ tData callfunc(struct fncall* a){
    
     if(!oldval || !newval){
         printf("Out of memory!");
+        exit(1);
     }
 
+    // Evaluar argumentos pasados
     i=0;
     while(explist){
         newval[i] = eval(explist->a);
@@ -212,27 +221,34 @@ tData callfunc(struct fncall* a){
       exit(1);
     }
 
-    params = sym->params;
+    // 2. Asignar valores (CORREGIDO)
+    // No hacemos params = sym->params; usamos el 'params' que ya determinamos arriba
+    params_iter = params; // Reiniciamos el iterador al inicio de la lista correcta
     i = 0;
-    while(params){
-        oldval[i] = params->s->value;
-        params->s->value = newval[i];
-        params = params->next;
+    while(params_iter){
+        oldval[i] = params_iter->s->value;
+        params_iter->s->value = newval[i]; // Aquí asignamos el 10 a la x
+        params_iter = params_iter->next;
         i++;
     }
 
+    // Ejecutar
     eval(body);
     RETURNSTATE = 0;
-
     ret = RETURNVAL;
 
-    params = sym->params;
+    // 3. Restaurar valores (CORREGIDO)
+    params_iter = params; // Reiniciamos el iterador otra vez
     i = 0;
-    while(params){
-        params->s->value = oldval[i];
-        params = params->next;
+    while(params_iter){
+        params_iter->s->value = oldval[i];
+        params_iter = params_iter->next;
         i++;
     }
+
+    // Limpieza de memoria temporal
+    free(oldval);
+    free(newval);
 
     return ret;
 }
