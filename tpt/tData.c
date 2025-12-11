@@ -11,6 +11,8 @@ tData nvo_nodo(int t){
 	nvo->data = NULL;
 	nvo->next = NULL;
 	nvo->elem = NULL;
+	nvo->lambdafn.params = NULL;
+	nvo->lambdafn.bodyfn = NULL;
 	nvo->num = 0;
 	nvo->numf = 0;
 	nvo->boolean = false;
@@ -217,6 +219,8 @@ void printData(tData d){
 			printf("%ld", d->num);
 		}else if(t == FLOAT){
 			printf("%.12lf", d->numf);
+		}else if(t == FUN){
+			printf(" <function> ");
 		}else if(t == BOOL){
 			switch(d->boolean){
 				case true: printf("true"); break;
@@ -366,6 +370,10 @@ void copyDataAux(tData O,tData C){
 		else if(returnType(O)==NUM || returnType(O)==BOOL || returnType(O) == FLOAT){
 			C->data = O->data;
 		}
+		else if(returnType(O) == FUN){
+            C->lambdafn.params = O->lambdafn.params;
+            C->lambdafn.bodyfn = O->lambdafn.bodyfn;
+        }
 		else{
 			C->data=nvo_nodo(returnType(O->data));
 			copyDataAux(O->data,C->data);

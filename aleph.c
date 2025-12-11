@@ -175,18 +175,21 @@ tData callfunc(struct fncall* a){
     struct symbol *sym = a->s;
     struct expl* explist = a->explist; //args actuales
     struct ast* body = sym->bodyfn;
-    struct syml* params; //args formales
+    struct syml* params = sym->params; //args formales
     tData *oldval, *newval, ret;
     int i;
     int nargs;
-
+    
+    if(!body && sym->value && returnType(sym->value) == FUN){
+        body = sym->value->lambdafn.bodyfn;
+        params = sym->value->lambdafn.params;
+    }
     
     if(!body){
         printf("Function %s is not defined", sym->name);
         exit(1);
     }
    
-    params = sym->params;
     for(nargs = 0; params; params = params->next)
         nargs++;
 
@@ -519,13 +522,7 @@ tData eval(struct ast *a){
                 while(cabIdd!=NULL){
                     if (cabExp!=NULL){
                         //cabIdd->s->value = copyData(eval(cabExp->a));
-                        /*Lambda function*/
-                        if(cabExp->a->nodetype == LAMBDA){
-                            struct lambda *l = (struct lambda *)cabExp->a;
-                            newfunc(cabIdd->s,l->symlist,l->expreturn);
-                        }else{
-                            cabIdd->s->value = copyData(eval(cabExp->a));
-                        }
+                        cabIdd->s->value = copyData(eval(cabExp->a));
                         Left = cabIdd->s->value;
                         cabIdd = cabIdd->next;
                         cabExp = cabExp->next;
@@ -749,6 +746,13 @@ tData eval(struct ast *a){
             break;
             case FUNC:{
                 ret = callfunc((struct fncall*)a);
+            }
+            break;
+            case LAMBDA:{
+                struct lambda *l = (struct lambda *)a;
+                ret = nvo_nodo(FUN);
+                ret->lambdafn.params = l->symlist;
+                ret->lambdafn.bodyfn = l->expreturn;
             }
             break;
             case RETURNKEYW:{

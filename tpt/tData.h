@@ -7,11 +7,15 @@
 #define NUM 4
 #define BOOL 5
 #define FLOAT 6
+#define FUN 7
 #include "Auxiliar.h"
 
 typedef enum{
 	false,true
 }bool;
+
+struct syml;
+struct ast;
 
 struct dataType{
 	int nodeType;
@@ -20,6 +24,10 @@ struct dataType{
 		long num;
 		bool boolean;
 		double numf;
+		struct{
+			struct syml *params;
+			struct ast *bodyfn;
+		}lambdafn;
 		struct{
 			struct dataType* data;
 			struct dataType* next;
