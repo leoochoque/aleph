@@ -18,7 +18,7 @@
 
 %start aleph
 
-%token '+' '-' '*' '/' '=' '{' '}' '[' ']' ',' ';' '%'
+%token '+' '-' '*' '/' '=' '{' '}' '[' ']' ',' ';' '%' '\\' ':'
 %token IF ELSE THEN  ENDIF WHILE DO ENDWHILE FOR ENDFOR PRINT PRINTLN EOL POWER SQRT DEF AS END RETURN TOLIST TOSET
 %token <sym> IDD
 %token <s> STR
@@ -34,7 +34,7 @@
 %left SIZE TOLIST TOSET
 %nonassoc ADD TO GET POP PRINT RANGE SETKW
 %left UNION DIFF INTSC 
-%nonassoc '|'
+%nonassoc '|' ':'
 %left '+' '-'
 %left '*' '/' '%' DIV
 %right POWER SQRT
@@ -53,6 +53,7 @@ aleph: %empty { if(mode) printf("aleph> "); $$ = NULL; }
     ;
 
 function: DEF IDD '(' listIdd ')' AS block END { newfunc($2,$4,$7); $$ = NULL;  }
+    | DEF IDD '('')' AS block END { newfunc($2,NULL,$6); $$ = NULL;  }
     ;
 
 sentence: %empty {$$ = NULL;}
@@ -117,10 +118,12 @@ exp: exp UNION exp { $$ = newast(USET,$1,$3); }
     | NUMBERFLOAT { $$ = newNumberFloat($1); }
     | BOOLEAN { $$ = newBoolean($1); }
     | IDD '(' listExp ')' { $$ = newcall($1,$3); }
+    | IDD '('')' { $$ = newcall($1,NULL); }
     | TOLIST exp { $$ = newast(TO_LIST,$2,NULL); }
     | TOSET exp { $$ = newast(TO_SET,$2,NULL); }
     | listComprehension
     | setComprehension
+    | '\\' listIdd ':' exp { $$ = newlambda($2,$4); }
     ;
 
 litSet: '{' listExp '}' { $$ = newast(TSET,(struct ast*)$2,NULL); }

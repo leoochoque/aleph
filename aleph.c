@@ -163,6 +163,14 @@ struct ast *newset(struct symbol *sym, struct ast *pos, struct ast *expend){
     return (struct ast *)a;
 };
 
+struct ast *newlambda(struct syml *symlist, struct ast * exp){
+    struct lambda* l = malloc(sizeof(struct lambda));
+    l->nodetype = LAMBDA;
+    l->symlist = symlist;
+    l->expreturn = newast(RETURNKEYW, exp, NULL);
+    return (struct ast *)l;
+};
+
 tData callfunc(struct fncall* a){
     struct symbol *sym = a->s;
     struct expl* explist = a->explist; //args actuales
@@ -231,7 +239,6 @@ tData eval(struct ast *a){
     tData Right = NULL, Left = NULL;
     int typeL, typeR;
     if(a && !RETURNSTATE)
-        
         switch(a->nodetype){
             /*
                 ">" <-> 1
@@ -511,7 +518,14 @@ tData eval(struct ast *a){
                 struct expl *cabExp = (((struct symasgn *)a)->l);
                 while(cabIdd!=NULL){
                     if (cabExp!=NULL){
-                        cabIdd->s->value = copyData(eval(cabExp->a));
+                        //cabIdd->s->value = copyData(eval(cabExp->a));
+                        /*Lambda function*/
+                        if(cabExp->a->nodetype == LAMBDA){
+                            struct lambda *l = (struct lambda *)cabExp->a;
+                            newfunc(cabIdd->s,l->symlist,l->expreturn);
+                        }else{
+                            cabIdd->s->value = copyData(eval(cabExp->a));
+                        }
                         Left = cabIdd->s->value;
                         cabIdd = cabIdd->next;
                         cabExp = cabExp->next;
@@ -602,7 +616,7 @@ tData eval(struct ast *a){
                 };
             }
             break;
-            case FORSTMT: {
+            case FORSTMT:{
                 int c = 0;
                 struct flow *fl = (struct flow *)a;
                 struct symbol* x = ((struct symref*)fl->cond)->s;

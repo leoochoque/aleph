@@ -48,7 +48,9 @@ BLOCKCOMMENT "{-"([^\}]|\}[^-])*"-\}"
 ")" |
 "," |
 "[" |
-"]" {return yytext[0];}
+"]" |
+":" |
+"\\" {return yytext[0];}
 ">" {yylval.r = 1; return CMP;}
 "<" {yylval.r = 2; return CMP;}
 "<>" {yylval.r = 3; return CMP;}

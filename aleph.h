@@ -77,6 +77,7 @@ struct ast *newasgn(struct syml *li, struct expl *le);
 #define LISTCOMP 1031
 #define SETCOMP 1032
 #define IFCOMPRENSHION 1033
+#define LAMBDA 1034
 
 struct ast{
     int nodetype;
@@ -131,6 +132,13 @@ struct cmp{
     int type;
 };
 
+struct lambda{
+    int nodetype;
+    struct syml *symlist;
+    struct ast *expreturn;
+};
+
+
 struct ast *newast(int nodetype, struct ast *l, struct ast *r);
 struct ast *newElem(char *);
 struct ast *newNumber(int);
@@ -142,6 +150,7 @@ struct ast * newflow(int nodetype, struct ast * cond, struct ast * tl, struct as
 struct ast * newcomprenshion(int nodetype, struct ast * op, struct ast * var, struct ast * iterable,struct ast * cond);
 struct ast *newset(struct symbol *sym, struct ast *pos, struct ast *expend);
 struct ast *newcall(struct symbol *name, struct expl *explist);
+struct ast *newlambda(struct syml *symlist, struct ast * exp);
 void newfunc(struct symbol *name, struct syml * symlist, struct ast *block);
 tData callfunc(struct fncall* a);
 tData eval(struct ast *);
