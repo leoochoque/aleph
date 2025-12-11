@@ -32,13 +32,14 @@
 %nonassoc IN CONTAINS
 %nonassoc CMP
 %left SIZE TOLIST TOSET
-%nonassoc ADD TO GET POP PRINT RANGE SETKW
+%nonassoc ADD TO POP PRINT RANGE SETKW
 %left UNION DIFF INTSC 
 %nonassoc '|' ':'
 %left '+' '-'
 %left '*' '/' '%' DIV
 %right POWER SQRT
-%nonassoc UMINUS
+%left '(' ')' '[' ']'
+%nonassoc UMINUS GET
 
 %type <a> exp litSet litList sentence asign if block while for aleph function setComprehension listComprehension  comp_tail_opt
 %type <le> listExp
@@ -79,20 +80,33 @@ while: WHILE exp DO block ENDWHILE { $$ = newflow(WHSTMT, $2, $4, NULL);}
     ;
 
 if: IF exp THEN block ENDIF { $$ = newflow(IFSTMT, $2, $4, NULL);}
-   | IF exp THEN block ELSE block ENDIF { $$ = newflow(IFSTMT, $2, $4, $6); }
+    | IF exp THEN block ELSE block ENDIF { $$ = newflow(IFSTMT, $2, $4, $6); }
     ;
 
 asign: listIdd '=' listExp { $$ = newasgn($1,$3); }
+    | exp '[' exp ']' '=' exp { 
+        /* Verificamos que lo de la izquierda sea una variable (REF) */
+        if ($1->nodetype == REF) {
+            /* Extraemos el símbolo de la estructura symref para pasarlo a newset */
+            struct symref *ref = (struct symref *)$1;
+            $$ = newset(ref->s, $3, $6);
+        } else {
+            yyerror("Error: Assignment target must be a variable name.");
+            /* Manejo de error seguro para evitar crash */
+            $$ = NULL; 
+        }
+    }
     ;
 
 exp: exp UNION exp { $$ = newast(USET,$1,$3); }
     | exp INTSC exp { $$ = newast(ISET,$1,$3); }
     | exp DIFF exp { $$ = newast(DSET,$1,$3); }
     | ADD exp TO exp { $$ = newast(ADDTO,$2,$4); }
-    | GET exp '[' exp ']' { $$ = newast(GETTER,$2,$4); }
+    | exp '[' exp ']' { $$ = newast(GETTER,$1,$3); }
     | RANGE '(' listExp ')' { $$ = newast(RANGEOP,(struct ast*)$3,NULL); }
     | POP exp { $$ = newast(PLIST,$2,NULL); }
     | SIZE exp { $$ = newast(SIZEOP,$2,NULL); }
+    | GET exp { $$ = $2;} //sugar syntax compatibilidad con versiones anteriores
     | exp IN exp { $$ = newast(INOP,$1,$3); }
     | exp CONTAINS exp { $$ = newast(CONTOP,$1,$3); }
     | exp CMP exp { $$ = newast($2,$1,$3); }
@@ -117,8 +131,8 @@ exp: exp UNION exp { $$ = newast(USET,$1,$3); }
     | NUMBER { $$ = newNumber($1); }
     | NUMBERFLOAT { $$ = newNumberFloat($1); }
     | BOOLEAN { $$ = newBoolean($1); }
-    | IDD '(' listExp ')' { $$ = newcall($1,$3); }
-    | IDD '('')' { $$ = newcall($1,NULL); }
+    | exp '(' listExp ')' { $$ = newcall($1,$3); }
+    | exp '('')' { $$ = newcall($1,NULL); }
     | TOLIST exp { $$ = newast(TO_LIST,$2,NULL); }
     | TOSET exp { $$ = newast(TO_SET,$2,NULL); }
     | listComprehension

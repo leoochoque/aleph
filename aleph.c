@@ -146,10 +146,10 @@ void newfunc(struct symbol *name, struct syml * symlist, struct ast *block){
     name->params = symlist;
 };
 
-struct ast *newcall(struct symbol *name, struct expl *explist){
+struct ast *newcall(struct ast * func, struct expl *explist){
     struct fncall* fn = malloc(sizeof(struct fncall));
     fn->nodetype = FUNC;
-    fn->s = name;
+    fn->func = func;
     fn->explist = explist;
     return (struct ast*)fn;
 };
@@ -170,7 +170,7 @@ struct ast *newlambda(struct syml *symlist, struct ast * exp){
     l->expreturn = newast(RETURNKEYW, exp, NULL);
     return (struct ast *)l;
 };
-
+/*
 tData callfunc(struct fncall* a){
     struct symbol *sym = a->s;
     struct expl* explist = a->explist; 
@@ -250,6 +250,70 @@ tData callfunc(struct fncall* a){
     free(oldval);
     free(newval);
 
+    return ret;
+}
+*/
+tData executeFunction(tData funcData, struct expl* explist){
+    // Recuperamos params y body directamente del tData
+    struct ast* body = funcData->lambdafn.bodyfn;
+    struct syml* params = funcData->lambdafn.params;
+    
+    struct syml* params_iter; 
+    tData *oldval, *newval, ret;
+    int i, nargs;
+
+    // Validación básica
+    if(returnType(funcData) != FUN || !body){
+         printf("Error: Trying to call a non-function object.\n");
+         exit(1);
+    }
+   
+    // Contar argumentos (Igual que antes)
+    params_iter = params;
+    for(nargs = 0; params_iter; params_iter = params_iter->next) nargs++;
+
+    oldval = malloc(nargs*sizeof(tData));
+    newval = malloc(nargs*sizeof(tData));
+    
+    // Evaluar argumentos (Igual que antes)
+    i=0;
+    while(explist){
+        newval[i] = eval(explist->a);
+        explist = explist->next;
+        i++;
+    }
+
+    if(nargs != i){
+      printf("Error: Incorrect number of arguments. Expected %d, got %d.\n", nargs, i);
+      exit(1);
+    }
+
+    // Guardar contexto anterior y asignar nuevos valores (Igual que antes)
+    params_iter = params;
+    i = 0;
+    while(params_iter){
+        oldval[i] = params_iter->s->value;
+        params_iter->s->value = newval[i];
+        params_iter = params_iter->next;
+        i++;
+    }
+
+    // Ejecutar cuerpo
+    eval(body);
+    RETURNSTATE = 0;
+    ret = RETURNVAL;
+
+    // Restaurar contexto (Igual que antes)
+    params_iter = params;
+    i = 0;
+    while(params_iter){
+        params_iter->s->value = oldval[i];
+        params_iter = params_iter->next;
+        i++;
+    }
+
+    free(oldval);
+    free(newval);
     return ret;
 }
 
@@ -556,8 +620,18 @@ tData eval(struct ast *a){
             }
             break;
             case REF:{
-                ret = (((struct symref *)a)->s)->value;
-                if (!ret) {
+                struct symbol *s = ((struct symref *)a)->s;
+                // Si tiene valor (variable), lo devolvemos
+                if (s->value) {
+                    ret = s->value;
+                } 
+                // Si no tiene valor pero tiene cuerpo (función definida con DEF), creamos un wrapper al vuelo
+                else if (s->bodyfn) {
+                    ret = nvo_nodo(FUN);
+                    ret->lambdafn.params = s->params;
+                    ret->lambdafn.bodyfn = s->bodyfn;
+                }
+                else {
                     yyerror("Error: the variable is not defined\n");
                     exit(1);
                 }
@@ -761,7 +835,16 @@ tData eval(struct ast *a){
             }
             break;
             case FUNC:{
-                ret = callfunc((struct fncall*)a);
+                struct fncall *fnode = (struct fncall*)a;
+                // 1. Evaluamos la expresión de la izquierda (el nombre, la lambda, o el array access)
+                tData func = eval(fnode->func);
+                // 2. Ejecutamos usando la función genérica
+                if(func) {
+                    ret = executeFunction(func, fnode->explist);
+                } else {
+                    yyerror("Error: Function evaluation returned NULL\n");
+                    exit(1);
+                }
             }
             break;
             case LAMBDA:{
