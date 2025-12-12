@@ -9,6 +9,9 @@ int contador = 0;
 tData RETURNVAL = NULL;
 int RETURNSTATE = 0;
 
+env *global_env = NULL;
+env *current_env = NULL;
+
 /* Tabla de símbolos */
 
 struct symbol symtab[NHASH];
@@ -16,12 +19,48 @@ struct symbol symtab[NHASH];
 static unsigned symhash(char *sym){
     unsigned int hash = 0;
     unsigned c;
-    
     while(c = *sym++) hash = hash*9 ^ c;
-    
     return hash;
 }
 
+void init_env(){
+    global_env = calloc(1, sizeof(env));
+    global_env->prev = NULL;
+    current_env = global_env;
+}
+
+struct symbol *define_symbol(char *sym){
+    unsigned hash = symhash(sym) % NHASH;
+    struct symbol *sp = current_env->table[hash];
+
+    while(sp != NULL) {
+        if(compara_cad(sp->name, sym) == 0) return sp;
+        sp = sp->next;
+    }
+
+    sp = calloc(1, sizeof(struct symbol));
+    sp->name = devuelve_cad(sym);
+    sp->next = current_env->table[hash]; //why is that porque no NULL
+    current_env->table[hash] = sp;
+    return sp;
+}
+
+struct symbol *lookup(char *sym){
+    env *e = current_env;
+    unsigned hash = symhash(sym) % NHASH;
+
+    while(e != NULL){
+        struct symbol *sp = e->table[hash];
+        while(sp != NULL) {
+            if(compara_cad(sp->name, sym) == 0) return sp;
+            sp = sp->next;
+        }
+        e = e->prev;
+    }
+    return NULL;
+}
+
+/*
 struct symbol *lookup(char *sym){
     struct symbol *sp = &symtab[symhash(sym)%NHASH];
     int scount = NHASH;
@@ -44,6 +83,7 @@ struct symbol *lookup(char *sym){
     yyerror("Out of memory!\n");
     abort();
 }
+*/
 
 struct ast *newasgn(struct syml *li, struct expl *le){
     struct symasgn *sym = malloc(sizeof(struct symasgn));
@@ -53,10 +93,10 @@ struct ast *newasgn(struct syml *li, struct expl *le){
     return (struct ast *)sym;
 }
 
-struct ast *newref(struct symbol *s){
+struct ast *newref(char *s){
     struct symref *sym = malloc(sizeof(struct symref));
     sym->nodetype = REF;
-    sym->s = s;
+    sym->name = s;
     return (struct ast *)sym;
 }
 
@@ -111,9 +151,9 @@ struct expl *newexpl(struct ast *a, struct expl *next){
     return l;
 }
 
-struct syml *newsyml(struct symbol *s, struct syml *next){
+struct syml *newsyml(char *s, struct syml *next){
     struct syml *l = malloc(sizeof(struct syml));
-    l->s = s;
+    l->name = s;
     l->next = next;
     return l;
 }
@@ -138,12 +178,13 @@ struct ast * newcomprenshion(int nodetype, struct ast * op, struct ast * var, st
     return (struct ast *)a;
 };
 
-void newfunc(struct symbol *name, struct syml * symlist, struct ast *block){
-    //falta hacer free a bodyfn y params
-    if(name->bodyfn) free(name->bodyfn);
-    if(name->params) free(name->params);
-    name->bodyfn = block;
-    name->params = symlist;
+void newfunc(char *name, struct syml * symlist, struct ast *block){
+    struct symbol *s = define_symbol(name);
+    tData f = nvo_nodo(FUN);
+    f->function.params = symlist;
+    f->function.body = block;
+    f->function.context = current_env;
+    s->value = f;
 };
 
 struct ast *newcall(struct ast * func, struct expl *explist){
@@ -154,10 +195,10 @@ struct ast *newcall(struct ast * func, struct expl *explist){
     return (struct ast*)fn;
 };
 
-struct ast *newset(struct symbol *sym, struct ast *pos, struct ast *expend){
+struct ast *newset(char *sym, struct ast *pos, struct ast *expend){
     struct set* a = malloc(sizeof(struct set));
     a->nodetype = SETTER;
-    a->s = sym;
+    a->name = sym;
     a->b = pos;
     a->c = expend;
     return (struct ast *)a;
@@ -170,151 +211,62 @@ struct ast *newlambda(struct syml *symlist, struct ast * exp){
     l->expreturn = newast(RETURNKEYW, exp, NULL);
     return (struct ast *)l;
 };
-/*
-tData callfunc(struct fncall* a){
-    struct symbol *sym = a->s;
-    struct expl* explist = a->explist; 
-    struct ast* body = sym->bodyfn;
-    struct syml* params = sym->params; 
-    
-    // Puntero auxiliar para no perder el inicio de la lista de parámetros
-    struct syml* params_iter; 
 
-    tData *oldval, *newval, ret;
-    int i;
-    int nargs;
-    
-    // 1. Determinar de dónde sacar el cuerpo y los parámetros
-    if(!body && sym->value && returnType(sym->value) == FUN){
-        body = sym->value->lambdafn.bodyfn;
-        params = sym->value->lambdafn.params;
-    }
-    
-    if(!body){
-        printf("Function %s is not defined", sym->name);
-        exit(1);
-    }
-   
-    // Contar argumentos
-    params_iter = params; // Usamos un iterador auxiliar
-    for(nargs = 0; params_iter; params_iter = params_iter->next)
-        nargs++;
-
-    oldval = malloc(nargs*sizeof(tData));
-    newval = malloc(nargs*sizeof(tData));
-   
-    if(!oldval || !newval){
-        printf("Out of memory!");
-        exit(1);
-    }
-
-    // Evaluar argumentos pasados
-    i=0;
-    while(explist){
-        newval[i] = eval(explist->a);
-        explist = explist->next;
-        i++;
-    }
-
-    if(nargs != i){
-      printf("Expected %d arguments for the function %s",nargs,sym->name);
-      exit(1);
-    }
-
-    // 2. Asignar valores (CORREGIDO)
-    // No hacemos params = sym->params; usamos el 'params' que ya determinamos arriba
-    params_iter = params; // Reiniciamos el iterador al inicio de la lista correcta
-    i = 0;
-    while(params_iter){
-        oldval[i] = params_iter->s->value;
-        params_iter->s->value = newval[i]; // Aquí asignamos el 10 a la x
-        params_iter = params_iter->next;
-        i++;
-    }
-
-    // Ejecutar
-    eval(body);
-    RETURNSTATE = 0;
-    ret = RETURNVAL;
-
-    // 3. Restaurar valores (CORREGIDO)
-    params_iter = params; // Reiniciamos el iterador otra vez
-    i = 0;
-    while(params_iter){
-        params_iter->s->value = oldval[i];
-        params_iter = params_iter->next;
-        i++;
-    }
-
-    // Limpieza de memoria temporal
-    free(oldval);
-    free(newval);
-
-    return ret;
-}
-*/
 tData executeFunction(tData funcData, struct expl* explist){
-    // Recuperamos params y body directamente del tData
-    struct ast* body = funcData->function.body;
-    struct syml* params = funcData->function.params;
-    
-    struct syml* params_iter; 
-    tData *oldval, *newval, ret;
-    int i, nargs;
+    struct syml* params = NULL;
+    struct ast *body = NULL;
+    env *new_env = NULL;
+    tData ret_val = NULL;
 
-    // Validación básica
-    if(returnType(funcData) != FUN || !body){
-         printf("Error: Trying to call a non-function object.\n");
-         exit(1);
-    }
-   
-    // Contar argumentos (Igual que antes)
-    params_iter = params;
-    for(nargs = 0; params_iter; params_iter = params_iter->next) nargs++;
+    if(returnType(funcData) == STRCTDEF){
+        tData instance = nvo_nodo(STRCINS);
+        instance->structIns.definition = funcData;
 
-    oldval = malloc(nargs*sizeof(tData));
-    newval = malloc(nargs*sizeof(tData));
-    
-    // Evaluar argumentos (Igual que antes)
-    i=0;
-    while(explist){
-        newval[i] = eval(explist->a);
-        explist = explist->next;
-        i++;
-    }
+        new_env = calloc(1, sizeof(env));
+        new_env->prev = global_env;
+        instance->structIns.context = new_env;
 
-    if(nargs != i){
-      printf("Error: Incorrect number of arguments. Expected %d, got %d.\n", nargs, i);
-      exit(1);
+        ret_val = instance;
+
+        params = funcData->structDef.params;
+        body = funcData->structDef.body;
+    }else if(returnType(funcData) == FUN){
+        new_env = calloc(1, sizeof(env));
+
+        new_env->prev = funcData->function.context ? funcData->function.context : global_env;
+
+        params = funcData->function.params;
+        body = funcData->function.body;
+    }else {
+        printf("Error: Not a function nor struct.\n");
+        exit(1);
     }
 
-    // Guardar contexto anterior y asignar nuevos valores (Igual que antes)
-    params_iter = params;
-    i = 0;
-    while(params_iter){
-        oldval[i] = params_iter->s->value;
-        params_iter->s->value = newval[i];
-        params_iter = params_iter->next;
-        i++;
+    env *saved_env = current_env;
+
+    struct expl *args_node = explist;
+    struct syml *params_node = params;
+
+    current_env = new_env;
+
+    while(args_node != NULL && params_node != NULL){
+        current_env = saved_env;
+        tData arg_value = eval(args_node->a);
+        current_env = new_env;
+
+        struct symbol *s = define_symbol(params_node->name);
+        s->value = copyData(arg_value);
+
+        params_node = params_node->next;
+        args_node = args_node->next;
     }
 
-    // Ejecutar cuerpo
     eval(body);
-    RETURNSTATE = 0;
-    ret = RETURNVAL;
 
-    // Restaurar contexto (Igual que antes)
-    params_iter = params;
-    i = 0;
-    while(params_iter){
-        params_iter->s->value = oldval[i];
-        params_iter = params_iter->next;
-        i++;
-    }
+    current_env = saved_env;
 
-    free(oldval);
-    free(newval);
-    return ret;
+    if(returnType(funcData) == STRCTDEF) return ret_val;
+    return RETURNVAL;
 }
 
 tData eval(struct ast *a){
@@ -460,14 +412,15 @@ tData eval(struct ast *a){
             case SETTER:{
                 // set x[0] as 4
                 struct set *setter = (struct set *)a;
-                struct symbol *s = setter->s;
+                struct symbol *s = lookup(setter->name);
+                if (!s) { printf("Error: Variable '%s' not found in set operation.\n", setter->name); exit(1); }
                 Left = eval(setter->b);
                 Right = eval(setter->c);
                 if (returnType(s->value)==LIST){
                     if ((int)Left->num < (SIZEDATA(s->value))->num && (int)Left->num >=0)
                         s->value = REPLACE(s->value, Left, Right);
                     else{
-                        yyerror("Error: index out of range\n");
+                        yyerror("Error: Index out of range\n");
                         exit(1);
                     }
                 }
@@ -600,15 +553,16 @@ tData eval(struct ast *a){
                 struct syml *cabIdd = (((struct symasgn *)a)->s);
                 struct expl *cabExp = (((struct symasgn *)a)->l);
                 while(cabIdd!=NULL){
+                    struct symbol *s = define_symbol(cabIdd->name);
                     if (cabExp!=NULL){
                         //cabIdd->s->value = copyData(eval(cabExp->a));
-                        cabIdd->s->value = copyData(eval(cabExp->a));
-                        Left = cabIdd->s->value;
+                        s->value = copyData(eval(cabExp->a));
+                        Left = s->value;
                         cabIdd = cabIdd->next;
                         cabExp = cabExp->next;
                     }
                     else{
-                        cabIdd->s->value = copyData(Left);
+                        s->value = copyData(Left);
                         cabIdd = cabIdd->next;
                     }
                 }
@@ -620,19 +574,18 @@ tData eval(struct ast *a){
             }
             break;
             case REF:{
-                struct symbol *s = ((struct symref *)a)->s;
-                // Si tiene valor (variable), lo devolvemos
-                if (s->value) {
-                    ret = s->value;
-                } 
-                // Si no tiene valor pero tiene cuerpo (función definida con DEF), creamos un wrapper al vuelo
-                else if (s->bodyfn) {
-                    ret = nvo_nodo(FUN);
-                    ret->function.params = s->params;
-                    ret->function.body = s->bodyfn;
+                struct symref *ref = (struct symref *)a;
+                struct symbol *active_sym = lookup(ref->name);
+
+                if (active_sym == NULL) {
+                    printf("Error: Variable '%s' is not defined in the current scope.\n", ref->name);
+                    exit(1);
+                }
+                if (active_sym->value) {
+                    ret = active_sym->value; 
                 }
                 else {
-                    yyerror("Error: the variable is not defined\n");
+                    printf("Error: Variable '%s' has no value assigned (null).\n", ref->name);
                     exit(1);
                 }
             }
@@ -706,7 +659,8 @@ tData eval(struct ast *a){
             case FORSTMT:{
                 int c = 0;
                 struct flow *fl = (struct flow *)a;
-                struct symbol* x = ((struct symref*)fl->cond)->s;
+                char *loopvar = ((struct symref*)fl->cond)->name;
+                struct symbol* x = lookup(loopvar);
                 tData copy = copyData(eval(fl->tl));
                 if(returnType(copy) != LIST && returnType(copy) != SET){
                     yyerror("Error: Expected type list or set in for statement\n");
@@ -723,7 +677,8 @@ tData eval(struct ast *a){
             break;
             case LISTCOMP:{
                 struct comprehension *comp = (struct comprehension *)a;
-                struct symbol* x = ((struct symref*)comp->var)->s;
+                char *compvar = ((struct symref*)comp->var)->name;
+                struct symbol* x = lookup(compvar);
                 Left = x->value;
                 tData copy = copyData(eval(comp->iterable));
                 int c = 0;
@@ -750,7 +705,8 @@ tData eval(struct ast *a){
             break;
             case SETCOMP:{
                 struct comprehension *comp = (struct comprehension *)a;
-                struct symbol* x = ((struct symref*)comp->var)->s;
+                char *compvar = ((struct symref*)comp->var)->name;
+                struct symbol* x = lookup(compvar);
                 Left = x->value;
                 tData copy = copyData(eval(comp->iterable));
                 int c = 0;

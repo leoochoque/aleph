@@ -3,14 +3,21 @@
 extern int mode;
 /* Tabla de símbolos */
 
-#define NHASH 9997
+#define NHASH 101
 
 struct symbol{
     char *name;
     tData value;
-    struct ast *bodyfn;
-    struct syml *params;
+    struct symbol *next; // Para colisiones en la hash
 };
+
+typedef struct Env{
+    struct symbol * table[NHASH];
+    struct Env * prev;
+}env;
+
+extern env *global_env;
+extern env *current_env;
 
 struct symasgn{
     int nodetype;
@@ -20,7 +27,7 @@ struct symasgn{
 
 struct symref{
     int nodetype;
-    struct symbol *s;
+    char *name;
 };
 
 struct flow{
@@ -38,8 +45,11 @@ struct comprehension{
     struct ast* cond;
 };
 
-struct symbol *lookup(char *sym);
-struct ast *newref(struct symbol *s);
+void init_env();
+struct symbol *lookup(char *sym);        // Busca recursivamente hacia arriba
+struct symbol *define_symbol(char *sym); // Crea variable en el entorno ACTUAL
+
+struct ast *newref(char *s);
 struct ast *newasgn(struct syml *li, struct expl *le);
 
 //Declaracion de tipos de AST
@@ -78,6 +88,7 @@ struct ast *newasgn(struct syml *li, struct expl *le);
 #define SETCOMP 1032
 #define IFCOMPRENSHION 1033
 #define LAMBDA 1034
+#define DOT_OP 1035
 
 struct ast{
     int nodetype;
@@ -93,7 +104,7 @@ struct fncall{
 
 struct set{
     int nodetype;
-    struct symbol *s;
+    char * name;
     struct ast *b;
     struct ast *c;
 };
@@ -123,7 +134,7 @@ struct expl{
 };
 
 struct syml{
-    struct symbol *s;
+    char * name;
     struct syml *next;
 };
 
@@ -145,12 +156,12 @@ struct ast *newNumber(int);
 struct ast *newBoolean(bool);
 struct ast *newNumberFloat(double num);
 struct expl *newexpl(struct ast *a, struct expl *next);
-struct syml *newsyml(struct symbol *s, struct syml *next);
+struct syml *newsyml(char *s, struct syml *next);
 struct ast * newflow(int nodetype, struct ast * cond, struct ast * tl, struct ast * fl);
 struct ast * newcomprenshion(int nodetype, struct ast * op, struct ast * var, struct ast * iterable,struct ast * cond);
-struct ast *newset(struct symbol *sym, struct ast *pos, struct ast *expend);
+struct ast *newset(char *s, struct ast *pos, struct ast *expend);
 struct ast *newcall(struct ast *func, struct expl *explist);
 struct ast *newlambda(struct syml *symlist, struct ast * exp);
-void newfunc(struct symbol *name, struct syml * symlist, struct ast *block);
+void newfunc(char *name, struct syml * symlist, struct ast *block);
 tData callfunc(struct fncall* a);
 tData eval(struct ast *);

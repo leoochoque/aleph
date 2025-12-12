@@ -8,14 +8,20 @@
 #define BOOL 5
 #define FLOAT 6
 #define FUN 7
+#define STRCTDEF 8
+#define STRCINS 9
+
 #include "Auxiliar.h"
 
 typedef enum{
 	false,true
 }bool;
 
+typedef struct dataType* tData;
+
 struct syml;
 struct ast;
+struct Env;
 
 struct dataType{
 	int nodeType;
@@ -27,14 +33,23 @@ struct dataType{
 		struct{
 			struct syml *params;
 			struct ast *body;
+			struct Env *context;
 		}function;
+		struct {
+			char * name;
+			struct syml * params;
+			struct ast * body;
+		}structDef;
+		struct{
+			struct dataType *definition;
+			struct Env *context;
+		}structIns;
 		struct{
 			struct dataType* data;
 			struct dataType* next;
 		};
 	};
 };
-typedef struct dataType* tData;
 
 /*operaciones generales*/
 

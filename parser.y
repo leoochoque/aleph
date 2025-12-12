@@ -11,7 +11,6 @@
     long i;
     int r;
     double f;
-    struct symbol *sym;
     struct expl* le;
     struct syml* ls;
 }
@@ -20,8 +19,7 @@
 
 %token '+' '-' '*' '/' '=' '{' '}' '[' ']' ',' ';' '%' '\\' ':'
 %token IF ELSE THEN  ENDIF WHILE DO ENDWHILE FOR ENDFOR PRINT PRINTLN EOL POWER SQRT DEF AS END RETURN TOLIST TOSET
-%token <sym> IDD
-%token <s> STR
+%token <s> STR IDD
 %token <i> NUMBER
 %token <r> BOOLEAN CMP
 %token <f> NUMBERFLOAT
@@ -89,7 +87,7 @@ asign: listIdd '=' listExp { $$ = newasgn($1,$3); }
         if ($1->nodetype == REF) {
             /* Extraemos el símbolo de la estructura symref para pasarlo a newset */
             struct symref *ref = (struct symref *)$1;
-            $$ = newset(ref->s, $3, $6);
+            $$ = newset(ref->name, $3, $6);
         } else {
             yyerror("Error: Assignment target must be a variable name.");
             /* Manejo de error seguro para evitar crash */

@@ -75,7 +75,7 @@ BLOCKCOMMENT "{-"([^\}]|\}[^-])*"-\}"
 "return" {return RETURN;}
 "tolist" {return TOLIST;}
 "toset" {return TOSET;}
-{ID} { yylval.sym = lookup(yytext); return IDD; }
+{ID} { yylval.s = devuelve_cad(yytext); return IDD; }
 {NUMBER} {yylval.i = atoi(yytext);return NUMBER; }
 {NUMBERFLOAT} {yylval.f = atof(yytext); return NUMBERFLOAT; }
 {STR} {yytext[tam_cad(yytext)-1] = '\0'; yylval.s = ++yytext; return STR; }
@@ -89,6 +89,8 @@ BLOCKCOMMENT "{-"([^\}]|\}[^-])*"-\}"
 %%
 
 int main(int argc, char** argv){
+   init_env();
+
    if (argc > 1) {
         FILE *file = fopen(argv[1], "r");
         if (!file) {
