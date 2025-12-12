@@ -11,8 +11,8 @@ tData nvo_nodo(int t){
 	nvo->data = NULL;
 	nvo->next = NULL;
 	nvo->elem = NULL;
-	nvo->lambdafn.params = NULL;
-	nvo->lambdafn.bodyfn = NULL;
+	nvo->function.params = NULL;
+	nvo->function.body = NULL;
 	nvo->num = 0;
 	nvo->numf = 0;
 	nvo->boolean = false;
@@ -371,8 +371,8 @@ void copyDataAux(tData O,tData C){
 			C->data = O->data;
 		}
 		else if(returnType(O) == FUN){
-            C->lambdafn.params = O->lambdafn.params;
-            C->lambdafn.bodyfn = O->lambdafn.bodyfn;
+            C->function.params = O->function.params;
+            C->function.body = O->function.body;
         }
 		else{
 			C->data=nvo_nodo(returnType(O->data));

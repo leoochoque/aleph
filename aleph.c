@@ -255,8 +255,8 @@ tData callfunc(struct fncall* a){
 */
 tData executeFunction(tData funcData, struct expl* explist){
     // Recuperamos params y body directamente del tData
-    struct ast* body = funcData->lambdafn.bodyfn;
-    struct syml* params = funcData->lambdafn.params;
+    struct ast* body = funcData->function.body;
+    struct syml* params = funcData->function.params;
     
     struct syml* params_iter; 
     tData *oldval, *newval, ret;
@@ -628,8 +628,8 @@ tData eval(struct ast *a){
                 // Si no tiene valor pero tiene cuerpo (función definida con DEF), creamos un wrapper al vuelo
                 else if (s->bodyfn) {
                     ret = nvo_nodo(FUN);
-                    ret->lambdafn.params = s->params;
-                    ret->lambdafn.bodyfn = s->bodyfn;
+                    ret->function.params = s->params;
+                    ret->function.body = s->bodyfn;
                 }
                 else {
                     yyerror("Error: the variable is not defined\n");
@@ -850,8 +850,8 @@ tData eval(struct ast *a){
             case LAMBDA:{
                 struct lambda *l = (struct lambda *)a;
                 ret = nvo_nodo(FUN);
-                ret->lambdafn.params = l->symlist;
-                ret->lambdafn.bodyfn = l->expreturn;
+                ret->function.params = l->symlist;
+                ret->function.body = l->expreturn;
             }
             break;
             case RETURNKEYW:{

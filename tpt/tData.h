@@ -26,8 +26,8 @@ struct dataType{
 		double numf;
 		struct{
 			struct syml *params;
-			struct ast *bodyfn;
-		}lambdafn;
+			struct ast *body;
+		}function;
 		struct{
 			struct dataType* data;
 			struct dataType* next;
