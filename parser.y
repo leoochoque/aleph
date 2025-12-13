@@ -24,6 +24,7 @@
 %token <r> BOOLEAN CMP
 %token <f> NUMBERFLOAT
 
+%left ':'
 %left OR
 %left AND 
 %right NOT
@@ -32,12 +33,12 @@
 %left SIZE TOLIST TOSET
 %nonassoc ADD TO POP PRINT RANGE SETKW
 %left UNION DIFF INTSC 
-%nonassoc '|' ':'
+%nonassoc '|'
 %left '+' '-'
 %left '*' '/' '%' DIV
 %right POWER SQRT
 %left '(' ')' '[' ']'
-%nonassoc UMINUS GET '.'
+%nonassoc UMINUS GET '.' IF ELSE //have to look up
 
 %type <a> exp litSet litList sentence asign if block while for aleph function setComprehension listComprehension  comp_tail_opt structure structBlock structStmt
 %type <le> listExp
@@ -56,26 +57,9 @@ function: DEF IDD '(' listIdd ')' AS block END { $$ = newfunc($2,$4,$7); }
     | DEF IDD '('')' AS block END { $$ = newfunc($2,NULL,$6); }
     ;
 
-structure: STRUCT IDD '(' listIdd ')' AS structBlock END { 
-            tData s = nvo_nodo(STRCTDEF);
-            s->structDef.name = $2;
-            s->structDef.params = $4;
-            s->structDef.body = $7;
-            struct symbol* sym = define_symbol($2);
-            sym->value = s; // Guardar en variable global
-            $$ = NULL; 
-        }
-        | STRUCT IDD '('')' AS structBlock END { 
-            tData s = nvo_nodo(STRCTDEF);
-            s->structDef.name = $2;
-            s->structDef.params = NULL;
-            s->structDef.body = $6;
-            struct symbol* sym = define_symbol($2);
-            sym->value = s; // Guardar en variable global
-            $$ = NULL; 
-        }
+structure: STRUCT IDD '(' listIdd ')' AS structBlock END { newstruct($2,$4,$7); $$ = NULL; }
+        | STRUCT IDD '('')' AS structBlock END { newstruct($2,NULL,$6); $$ = NULL; }
         ;
-
 
 structBlock: structBlock structStmt ';' { $$ = newast(BLOCK, $1, $2); }
     | structStmt ';' { $$ = newast(BLOCK, $1, NULL); }
@@ -88,7 +72,7 @@ sentence: %empty {$$ = NULL;}
         | RETURN exp { $$ = newast(RETURNKEYW, $2, NULL); }
         | PRINT exp { $$ = newast(PRINTSTMT, $2, NULL); }
         | PRINTLN exp { $$ = newast(PRINTSTMT, $2, $2); }
-        | SETKW IDD '[' exp ']' AS exp { $$ = newset($2, $4, $7); }
+        | SETKW exp '[' exp ']' AS exp { $$ = newset($2, $4, $7); }
         | exp { if(mode) $$ = newast(PRINTSTMT, $1, NULL); }
         | asign
         | if
@@ -111,18 +95,8 @@ if: IF exp THEN block ENDIF { $$ = newflow(IFSTMT, $2, $4, NULL);}
     ;
 
 asign: listIdd '=' listExp { $$ = newasgn($1,$3); }
-    | exp '[' exp ']' '=' exp { 
-        /* Verificamos que lo de la izquierda sea una variable (REF) */
-        if ($1->nodetype == REF) {
-            /* Extraemos el símbolo de la estructura symref para pasarlo a newset */
-            struct symref *ref = (struct symref *)$1;
-            $$ = newset(ref->name, $3, $6);
-        } else {
-            yyerror("Error: Assignment target must be a variable name.");
-            /* Manejo de error seguro para evitar crash */
-            $$ = NULL; 
-        }
-    }
+    | exp '[' exp ']' '=' exp { $$ = newset($1,$3,$6); }
+    | exp '.' IDD '=' exp { $$ = newdotop($1, newref($3), $5); }
     ;
 
 exp: exp UNION exp { $$ = newast(USET,$1,$3); }
@@ -151,7 +125,8 @@ exp: exp UNION exp { $$ = newast(USET,$1,$3); }
     | '|' exp '|' { $$ = newast('|',$2,NULL);}
     | '-' exp %prec UMINUS { $$ = newast('M',$2,NULL); }
     | '(' exp ')' { $$ = $2; }
-    | exp '.' IDD { $$ = newast(DOT_OP, $1, newref($3)); }
+    | exp '.' IDD { $$ = newdotop($1, newref($3), NULL); }
+    | exp IF exp ELSE exp { $$ = newflow(IFTERN, $3, $1, $5); }
     | litSet
     | litList
     | IDD { $$ = newref($1); }
@@ -178,6 +153,7 @@ litList: '[' listExp ']' { $$ = newast(TLIST,(struct ast*)$2,NULL); }
 
 setComprehension: '{' exp FOR IDD IN exp comp_tail_opt '}' { $$ = newcomprenshion(SETCOMP,$2,newref($4),$6,$7); }
     ;
+
 listComprehension: '[' exp FOR IDD IN exp comp_tail_opt ']' { $$ = newcomprenshion(LISTCOMP,$2,newref($4),$6,$7); }
     ;
 

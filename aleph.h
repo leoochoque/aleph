@@ -90,6 +90,7 @@ struct ast *newasgn(struct syml *li, struct expl *le);
 #define LAMBDA 1034
 #define DOT_OP 1035
 #define FUNCDEF 1036
+#define IFTERN 1037
 
 struct ast{
     int nodetype;
@@ -112,7 +113,7 @@ struct fncreate{
 
 struct set{
     int nodetype;
-    char * name;
+    struct ast *name;
     struct ast *b;
     struct ast *c;
 };
@@ -157,6 +158,12 @@ struct lambda{
     struct ast *expreturn;
 };
 
+struct dotop{
+    int nodetype;
+    struct ast *obj;
+    struct ast *atr;
+    struct ast *val;
+};
 
 struct ast *newast(int nodetype, struct ast *l, struct ast *r);
 struct ast *newElem(char *);
@@ -167,9 +174,12 @@ struct expl *newexpl(struct ast *a, struct expl *next);
 struct syml *newsyml(char *s, struct syml *next);
 struct ast * newflow(int nodetype, struct ast * cond, struct ast * tl, struct ast * fl);
 struct ast * newcomprenshion(int nodetype, struct ast * op, struct ast * var, struct ast * iterable,struct ast * cond);
-struct ast *newset(char *s, struct ast *pos, struct ast *expend);
+struct ast *newset(struct ast *sym, struct ast *pos, struct ast *expend);
 struct ast *newcall(struct ast *func, struct expl *explist);
 struct ast *newlambda(struct syml *symlist, struct ast * exp);
 struct ast *newfunc(char *name, struct syml * symlist, struct ast *block);
+struct ast *newdotop(struct ast *obj, struct ast *atr, struct ast *val);
+void newstruct(char *name, struct syml * params, struct ast * body);
+
 tData callfunc(struct fncall* a);
 tData eval(struct ast *);

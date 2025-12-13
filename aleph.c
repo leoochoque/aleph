@@ -57,33 +57,9 @@ struct symbol *lookup(char *sym){
         }
         e = e->prev;
     }
+
     return NULL;
 }
-
-/*
-struct symbol *lookup(char *sym){
-    struct symbol *sp = &symtab[symhash(sym)%NHASH];
-    int scount = NHASH;
-    
-    while(--scount >= 0){
-        if(sp->name && !compara_cad(sp->name, sym)) 
-            return sp;
-        
-        if(!sp->name){
-            sp->name = devuelve_cad(sym);
-            sp->value = NULL;
-            sp->bodyfn = NULL;
-            sp->params = NULL;
-            return sp;
-        }
-        
-        if(++sp >= symtab+NHASH)
-            sp = symtab;
-    }
-    yyerror("Out of memory!\n");
-    abort();
-}
-*/
 
 struct ast *newasgn(struct syml *li, struct expl *le){
     struct symasgn *sym = malloc(sizeof(struct symasgn));
@@ -195,12 +171,12 @@ struct ast *newcall(struct ast * func, struct expl *explist){
     return (struct ast*)fn;
 };
 
-struct ast *newset(char *sym, struct ast *pos, struct ast *expend){
+struct ast *newset(struct ast* sym, struct ast *pos, struct ast *exp){
     struct set* a = malloc(sizeof(struct set));
     a->nodetype = SETTER;
     a->name = sym;
     a->b = pos;
-    a->c = expend;
+    a->c = exp;
     return (struct ast *)a;
 };
 
@@ -211,6 +187,24 @@ struct ast *newlambda(struct syml *symlist, struct ast * exp){
     l->expreturn = newast(RETURNKEYW, exp, NULL);
     return (struct ast *)l;
 };
+
+struct ast *newdotop(struct ast *obj, struct ast *atr, struct ast *val){
+    struct dotop* d = malloc(sizeof(struct dotop));
+    d->nodetype = DOT_OP;
+    d->obj = obj;
+    d->atr = atr;
+    d->val = val;
+    return (struct ast *)d;
+};
+
+void newstruct(char *name, struct syml * params, struct ast * body){
+    tData s = nvo_nodo(STRCTDEF);
+    s->structDef.name = devuelve_cad(name);
+    s->structDef.params = params;
+    s->structDef.body = body;
+    struct symbol* sym = define_symbol(name);
+    sym->value = s;
+}
 
 tData executeFunction(tData funcData, struct expl* explist){
     struct syml* params = NULL;
@@ -419,10 +413,14 @@ tData eval(struct ast *a){
             }
             break;
             case SETTER:{
-                // set x[0] as 4
                 struct set *setter = (struct set *)a;
-                struct symbol *s = lookup(setter->name);
-                if (!s) { printf("Error: Variable '%s' not found in set operation.\n", setter->name); exit(1); }
+                struct symref *ref = (struct symref *)(setter->name);
+                if(ref->nodetype != REF){
+                    yyerror("Error: Assignment target must be a variable name.\n");
+                    exit(1);
+                }
+                struct symbol *s = lookup(ref->name);
+                if (!s) { printf("Error: Variable '%s' not found in set operation.\n", ref->name); exit(1); }
                 Left = eval(setter->b);
                 Right = eval(setter->c);
                 if (returnType(s->value)==LIST){
@@ -454,7 +452,6 @@ tData eval(struct ast *a){
                 }
             }
             break;
-            
             case TELEM:{
                 ret = nvo_nodo(ELEM);
                 ret->elem = ((struct elem *)a)->elem;
@@ -579,6 +576,7 @@ tData eval(struct ast *a){
                         s = define_symbol(cabIdd->name);
                         s->value = val;
                     }
+
                     Left = val; 
                     cabIdd = cabIdd->next;
                     if(cabExp) cabExp = cabExp->next;
@@ -661,6 +659,15 @@ tData eval(struct ast *a){
                 }
             }
             break;
+            case IFTERN:{
+                struct flow *fl = (struct flow *)a;
+                if(isTrue(eval(fl->cond))){
+                    ret = eval(fl->tl);
+                }else if(fl->fl){
+                    ret = eval(fl->fl);
+                }
+            }
+            break;
             case WHSTMT:{
                 struct flow *fl = (struct flow *)a;
                 while (isTrue(eval(fl->cond)))
@@ -673,7 +680,7 @@ tData eval(struct ast *a){
                 int c = 0;
                 struct flow *fl = (struct flow *)a;
                 char *loopvar = ((struct symref*)fl->cond)->name;
-                struct symbol* x = define_symbol(loopvar); // Asegurarse de que funcione despues por la colision de HASH
+                struct symbol* x = define_symbol(loopvar);
                 tData copy = copyData(eval(fl->tl));
                 if(returnType(copy) != LIST && returnType(copy) != SET){
                     yyerror("Error: Expected type list or set in for statement\n");
@@ -700,7 +707,7 @@ tData eval(struct ast *a){
                 }
                 else{
                     ret = nvo_nodo(LIST);
-                    while (x->value =returnElem(copy , c)){
+                    while (x->value = returnElem(copy , c)){
                         if(comp->cond){
                             if(isTrue(eval(comp->cond))){
                                 ADDOP(ret, eval(comp->op));
@@ -708,7 +715,7 @@ tData eval(struct ast *a){
                         }
                         else{
                             ADDOP(ret, eval(comp->op));
-                            }
+                        }
                         c++;
                     }
                 }
@@ -828,11 +835,13 @@ tData eval(struct ast *a){
                 ret = nvo_nodo(FUN);
                 ret->function.params = l->symlist;
                 ret->function.body = l->expreturn;
+                ret->function.context = current_env;
             }
             break;
             case DOT_OP: {
-                tData obj = eval(a->l); // Lado izquierdo (la instancia)
-                char *name = ((struct symref*)a->r)->name; // Lado derecho (el nombre)
+                struct dotop *dotop = (struct dotop *)a;
+                tData obj = eval(dotop->obj); // Lado izquierdo (la instancia)
+                char *name = ((struct symref*)dotop->atr)->name; // Lado derecho (el nombre)
 
                 if(returnType(obj) == STRCINS) {
                     // Búsqueda Manual en el entorno del objeto
@@ -841,7 +850,12 @@ tData eval(struct ast *a){
                     struct symbol *sp = e->table[hash];
                     
                     while(sp) {
-                        if(compara_cad(sp->name, name) == 0) return sp->value;
+                        if(compara_cad(sp->name, name) == 0){
+                            if(dotop->val){
+                                sp->value = eval(dotop->val);
+                            }
+                            return sp->value;
+                        }
                         sp = sp->next;
                     }
                     // Si no está en la instancia, podrías buscar en la definición (métodos compartidos)
