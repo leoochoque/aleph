@@ -33,6 +33,7 @@ BLOCKCOMMENT "{-"([^\}]|\}[^-])*"-\}"
 "not" {return NOT;}
 "print" {return PRINT;}
 "println" {return PRINTLN;}
+"struct" {return STRUCT;}
 "exit" { return 0; }
 ";" |
 "+" |
@@ -49,6 +50,7 @@ BLOCKCOMMENT "{-"([^\}]|\}[^-])*"-\}"
 "," |
 "[" |
 "]" |
+"." |
 ":" |
 "\\" {return yytext[0];}
 ">" {yylval.r = 1; return CMP;}

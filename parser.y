@@ -18,7 +18,7 @@
 %start aleph
 
 %token '+' '-' '*' '/' '=' '{' '}' '[' ']' ',' ';' '%' '\\' ':'
-%token IF ELSE THEN  ENDIF WHILE DO ENDWHILE FOR ENDFOR PRINT PRINTLN EOL POWER SQRT DEF AS END RETURN TOLIST TOSET
+%token IF ELSE THEN  ENDIF WHILE DO ENDWHILE FOR ENDFOR PRINT PRINTLN EOL POWER SQRT DEF AS END RETURN TOLIST TOSET STRUCT
 %token <s> STR IDD
 %token <i> NUMBER
 %token <r> BOOLEAN CMP
@@ -37,9 +37,9 @@
 %left '*' '/' '%' DIV
 %right POWER SQRT
 %left '(' ')' '[' ']'
-%nonassoc UMINUS GET
+%nonassoc UMINUS GET '.'
 
-%type <a> exp litSet litList sentence asign if block while for aleph function setComprehension listComprehension  comp_tail_opt
+%type <a> exp litSet litList sentence asign if block while for aleph function setComprehension listComprehension  comp_tail_opt structure
 %type <le> listExp
 %type <ls> listIdd
 
@@ -49,11 +49,22 @@ aleph: %empty { if(mode) printf("aleph> "); $$ = NULL; }
     | aleph sentence ';' { eval($2); }
     | aleph sentence EOL { if(mode) { if($2) eval($2); printf("aleph> "); } }
     | aleph function ';'
+    | aleph structure ';'
     ;
 
 function: DEF IDD '(' listIdd ')' AS block END { newfunc($2,$4,$7); $$ = NULL;  }
     | DEF IDD '('')' AS block END { newfunc($2,NULL,$6); $$ = NULL;  }
     ;
+
+structure: STRUCT IDD '(' listIdd ')' AS block END { 
+            tData s = nvo_nodo(STRCTDEF);
+            s->structDef.name = $2;
+            s->structDef.params = $4;
+            s->structDef.body = $7;
+            struct symbol* sym = define_symbol($2);
+            sym->value = s; // Guardar en variable global
+            $$ = NULL; 
+        }
 
 sentence: %empty {$$ = NULL;}
         | RETURN exp { $$ = newast(RETURNKEYW, $2, NULL); }
@@ -122,6 +133,7 @@ exp: exp UNION exp { $$ = newast(USET,$1,$3); }
     | '|' exp '|' { $$ = newast('|',$2,NULL);}
     | '-' exp %prec UMINUS { $$ = newast('M',$2,NULL); }
     | '(' exp ')' { $$ = $2; }
+    | exp '.' IDD { $$ = newast(DOT_OP, $1, newref($3)); }
     | litSet
     | litList
     | IDD { $$ = newref($1); }

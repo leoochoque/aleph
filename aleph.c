@@ -265,8 +265,17 @@ tData executeFunction(tData funcData, struct expl* explist){
 
     current_env = saved_env;
 
-    if(returnType(funcData) == STRCTDEF) return ret_val;
-    return RETURNVAL;
+    if(returnType(funcData) == STRCTDEF) {
+        RETURNSTATE = 0;
+        return ret_val;
+    }
+
+    ret_val = RETURNVAL;
+
+    RETURNVAL = NULL;
+    RETURNSTATE = 0;
+
+    return ret_val;
 }
 
 tData eval(struct ast *a){
@@ -808,6 +817,28 @@ tData eval(struct ast *a){
                 ret = nvo_nodo(FUN);
                 ret->function.params = l->symlist;
                 ret->function.body = l->expreturn;
+            }
+            break;
+            case DOT_OP: {
+                tData obj = eval(a->l); // Lado izquierdo (la instancia)
+                char *name = ((struct symref*)a->r)->name; // Lado derecho (el nombre)
+
+                if(returnType(obj) == STRCINS) {
+                    // Búsqueda Manual en el entorno del objeto
+                    env *e = obj->structIns.context;
+                    unsigned hash = symhash(name) % NHASH;
+                    struct symbol *sp = e->table[hash];
+                    
+                    while(sp) {
+                        if(compara_cad(sp->name, name) == 0) return sp->value;
+                        sp = sp->next;
+                    }
+                    // Si no está en la instancia, podrías buscar en la definición (métodos compartidos)
+                    // Por ahora, error:
+                    printf("Error: Miembro '%s' no encontrado.\n", name);
+                    exit(1);
+                }
+                // Aquí puedes agregar lógica para .size, .length de listas nativas si quieres
             }
             break;
             case RETURNKEYW:{
