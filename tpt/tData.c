@@ -221,13 +221,17 @@ void printData(tData d){
 			printf("%.12lf", d->numf);
 		}else if(t == FUN){
 			printf(" <function> ");
+		}else if(t == STRCTDEF){
+			printf(" <struct definition> ");
+		}else if(t == STRCINS){
+			printf(" <struct instance> ");
 		}else if(t == BOOL){
 			switch(d->boolean){
 				case true: printf("true"); break;
 				default: printf("false");
 			}
 		}
-		while(d!=NULL && t!=ELEM && t!=NUM && t!=BOOL && t!=FLOAT){
+		while(d!=NULL && t!=ELEM && t!=NUM && t!=BOOL && t!=FLOAT && t!=FUN && t!=STRCTDEF && t!=STRCINS){
 			sig = d->next;
 			if(sig!=NULL){
 				if(d->data!=NULL){
@@ -367,12 +371,28 @@ void copyDataAux(tData O,tData C){
 		if(returnType(O)==ELEM){
 			C->elem = devuelve_cad(O->elem);
 		}
-		else if(returnType(O)==NUM || returnType(O)==BOOL || returnType(O) == FLOAT){
-			C->data = O->data;
+		else if(returnType(O)==NUM) {
+			C->num = O->num;
 		}
+        else if(returnType(O)==BOOL) {
+            C->boolean = O->boolean;
+        }
+        else if(returnType(O)==FLOAT) {
+            C->numf = O->numf;
+        }
 		else if(returnType(O) == FUN){
             C->function.params = O->function.params;
             C->function.body = O->function.body;
+			C->function.context = O->function.context;
+        }
+		else if(returnType(O) == STRCTDEF){ ///HACE FALTA COPIAR YA QUE NO SON EXPRESIONES
+            C->structDef.name = O->structDef.name;
+            C->structDef.params = O->structDef.params;
+            C->structDef.body = O->structDef.body;
+        }
+        else if(returnType(O) == STRCINS){ ///HACE FALTA COPIAR YA QUE NO SON EXPRESIONES
+            C->structIns.definition = O->structIns.definition;
+            C->structIns.context = O->structIns.context;
         }
 		else{
 			C->data=nvo_nodo(returnType(O->data));

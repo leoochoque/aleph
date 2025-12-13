@@ -39,7 +39,7 @@
 %left '(' ')' '[' ']'
 %nonassoc UMINUS GET '.'
 
-%type <a> exp litSet litList sentence asign if block while for aleph function setComprehension listComprehension  comp_tail_opt structure
+%type <a> exp litSet litList sentence asign if block while for aleph function setComprehension listComprehension  comp_tail_opt structure structBlock structStmt
 %type <le> listExp
 %type <ls> listIdd
 
@@ -48,15 +48,15 @@
 aleph: %empty { if(mode) printf("aleph> "); $$ = NULL; }
     | aleph sentence ';' { eval($2); }
     | aleph sentence EOL { if(mode) { if($2) eval($2); printf("aleph> "); } }
-    | aleph function ';'
+    | aleph function { eval($2); } ';'
     | aleph structure ';'
     ;
 
-function: DEF IDD '(' listIdd ')' AS block END { newfunc($2,$4,$7); $$ = NULL;  }
-    | DEF IDD '('')' AS block END { newfunc($2,NULL,$6); $$ = NULL;  }
+function: DEF IDD '(' listIdd ')' AS block END { $$ = newfunc($2,$4,$7); }
+    | DEF IDD '('')' AS block END { $$ = newfunc($2,NULL,$6); }
     ;
 
-structure: STRUCT IDD '(' listIdd ')' AS block END { 
+structure: STRUCT IDD '(' listIdd ')' AS structBlock END { 
             tData s = nvo_nodo(STRCTDEF);
             s->structDef.name = $2;
             s->structDef.params = $4;
@@ -65,6 +65,24 @@ structure: STRUCT IDD '(' listIdd ')' AS block END {
             sym->value = s; // Guardar en variable global
             $$ = NULL; 
         }
+        | STRUCT IDD '('')' AS structBlock END { 
+            tData s = nvo_nodo(STRCTDEF);
+            s->structDef.name = $2;
+            s->structDef.params = NULL;
+            s->structDef.body = $6;
+            struct symbol* sym = define_symbol($2);
+            sym->value = s; // Guardar en variable global
+            $$ = NULL; 
+        }
+        ;
+
+
+structBlock: structBlock structStmt ';' { $$ = newast(BLOCK, $1, $2); }
+    | structStmt ';' { $$ = newast(BLOCK, $1, NULL); }
+    ;
+
+structStmt: function {$$ = $1;} 
+        | asign {$$ = $1;} ;
 
 sentence: %empty {$$ = NULL;}
         | RETURN exp { $$ = newast(RETURNKEYW, $2, NULL); }

@@ -89,6 +89,7 @@ struct ast *newasgn(struct syml *li, struct expl *le);
 #define IFCOMPRENSHION 1033
 #define LAMBDA 1034
 #define DOT_OP 1035
+#define FUNCDEF 1036
 
 struct ast{
     int nodetype;
@@ -100,6 +101,13 @@ struct fncall{
   int nodetype;
   struct ast *func;
   struct expl* explist;
+};
+
+struct fncreate{
+  int nodetype;
+  char *name;
+  struct syml * symlist;
+  struct ast *block;
 };
 
 struct set{
@@ -162,6 +170,6 @@ struct ast * newcomprenshion(int nodetype, struct ast * op, struct ast * var, st
 struct ast *newset(char *s, struct ast *pos, struct ast *expend);
 struct ast *newcall(struct ast *func, struct expl *explist);
 struct ast *newlambda(struct syml *symlist, struct ast * exp);
-void newfunc(char *name, struct syml * symlist, struct ast *block);
+struct ast *newfunc(char *name, struct syml * symlist, struct ast *block);
 tData callfunc(struct fncall* a);
 tData eval(struct ast *);

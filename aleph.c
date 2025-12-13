@@ -178,13 +178,13 @@ struct ast * newcomprenshion(int nodetype, struct ast * op, struct ast * var, st
     return (struct ast *)a;
 };
 
-void newfunc(char *name, struct syml * symlist, struct ast *block){
-    struct symbol *s = define_symbol(name);
-    tData f = nvo_nodo(FUN);
-    f->function.params = symlist;
-    f->function.body = block;
-    f->function.context = current_env;
-    s->value = f;
+struct ast * newfunc(char *name, struct syml * symlist, struct ast *block){
+    struct fncreate* f = malloc(sizeof(struct fncreate));
+    f->nodetype = FUNCDEF;
+    f->name = name;
+    f->symlist = symlist;
+    f->block = block;
+    return (struct ast *)f;
 };
 
 struct ast *newcall(struct ast * func, struct expl *explist){
@@ -561,23 +561,27 @@ tData eval(struct ast *a){
             case ASGN:{
                 struct syml *cabIdd = (((struct symasgn *)a)->s);
                 struct expl *cabExp = (((struct symasgn *)a)->l);
+                
                 while(cabIdd!=NULL){
-                    struct symbol *s = define_symbol(cabIdd->name);
+                    tData val = NULL;
+
                     if (cabExp!=NULL){
-                        //cabIdd->s->value = copyData(eval(cabExp->a));
-                        s->value = copyData(eval(cabExp->a));
-                        Left = s->value;
-                        cabIdd = cabIdd->next;
-                        cabExp = cabExp->next;
+                        val = copyData(eval(cabExp->a)); 
+                    } else {
+                        val = copyData(Left); 
                     }
-                    else{
-                        s->value = copyData(Left);
-                        cabIdd = cabIdd->next;
+
+                    struct symbol *s = lookup(cabIdd->name);
+                    
+                    if (s != NULL) {
+                        s->value = val;
+                    } else {
+                        s = define_symbol(cabIdd->name);
+                        s->value = val;
                     }
-                }
-                if (cabExp){
-                    yyerror("Error: expected indentifier for the assign\n");
-                    exit(1);
+                    Left = val; 
+                    cabIdd = cabIdd->next;
+                    if(cabExp) cabExp = cabExp->next;
                 }
                 ret = NULL;
             }
@@ -669,7 +673,7 @@ tData eval(struct ast *a){
                 int c = 0;
                 struct flow *fl = (struct flow *)a;
                 char *loopvar = ((struct symref*)fl->cond)->name;
-                struct symbol* x = lookup(loopvar);
+                struct symbol* x = define_symbol(loopvar); // Asegurarse de que funcione despues por la colision de HASH
                 tData copy = copyData(eval(fl->tl));
                 if(returnType(copy) != LIST && returnType(copy) != SET){
                     yyerror("Error: Expected type list or set in for statement\n");
@@ -687,8 +691,7 @@ tData eval(struct ast *a){
             case LISTCOMP:{
                 struct comprehension *comp = (struct comprehension *)a;
                 char *compvar = ((struct symref*)comp->var)->name;
-                struct symbol* x = lookup(compvar);
-                Left = x->value;
+                struct symbol* x = define_symbol(compvar);
                 tData copy = copyData(eval(comp->iterable));
                 int c = 0;
                 if(returnType(copy) != LIST && returnType(copy) != SET){
@@ -708,15 +711,13 @@ tData eval(struct ast *a){
                             }
                         c++;
                     }
-                    x->value = Left;
                 }
             }
             break;
             case SETCOMP:{
                 struct comprehension *comp = (struct comprehension *)a;
                 char *compvar = ((struct symref*)comp->var)->name;
-                struct symbol* x = lookup(compvar);
-                Left = x->value;
+                struct symbol* x = define_symbol(compvar);
                 tData copy = copyData(eval(comp->iterable));
                 int c = 0;
                 if(returnType(copy) != LIST && returnType(copy) != SET){
@@ -737,7 +738,6 @@ tData eval(struct ast *a){
                         c++;
                     }
                     Depurar(ret);
-                    x->value = Left;
                 }
             }
             break;
@@ -799,6 +799,17 @@ tData eval(struct ast *a){
                 }
             }
             break;
+            case FUNCDEF:{
+                struct fncreate *fnode = (struct fncreate*)a;
+                struct symbol *s = define_symbol(fnode->name);
+                tData funcData = nvo_nodo(FUN);
+                funcData->function.params = fnode->symlist;
+                funcData->function.body = fnode->block;
+                funcData->function.context = current_env;
+                s->value = funcData;
+                ret = NULL;
+            }
+            break;
             case FUNC:{
                 struct fncall *fnode = (struct fncall*)a;
                 // 1. Evaluamos la expresión de la izquierda (el nombre, la lambda, o el array access)
@@ -835,7 +846,7 @@ tData eval(struct ast *a){
                     }
                     // Si no está en la instancia, podrías buscar en la definición (métodos compartidos)
                     // Por ahora, error:
-                    printf("Error: Miembro '%s' no encontrado.\n", name);
+                    printf("Error: Member '%s' not found in structure.\n", name);
                     exit(1);
                 }
                 // Aquí puedes agregar lógica para .size, .length de listas nativas si quieres
