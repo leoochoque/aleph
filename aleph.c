@@ -206,6 +206,13 @@ void newstruct(char *name, struct syml * params, struct ast * body){
     sym->value = s;
 }
 
+struct ast *newglobal(char *sym){
+    struct symref *s = malloc(sizeof(struct symref));
+    s->nodetype = GLOBALDECL;
+    s->name = sym;
+    return (struct ast *)s;
+}
+
 tData executeFunction(tData funcData, struct expl* explist){
     struct syml* params = NULL;
     struct ast *body = NULL;
@@ -558,6 +565,29 @@ tData eval(struct ast *a){
                 }
             }
             break;
+            case GLOBALDECL:{
+                struct symref *ref = (struct symref *)a;
+                env *saved_env = current_env;
+
+                current_env = global_env;
+                struct symbol *glb_sym = define_symbol(ref->name);
+
+                if (!glb_sym) { 
+                    printf("Error: Variable '%s' not found in global declaration.\n", ref->name); 
+                    exit(1); 
+                }
+                
+                current_env = saved_env;
+
+                if(current_env!=global_env){
+                    struct symbol *curr_sym = define_symbol(ref->name);
+                    curr_sym->value = NULL;
+                    curr_sym->ref = glb_sym;
+                }
+
+                ret = NULL;
+            }
+            break;
             case ASGN:{
                 struct syml *cabIdd = (((struct symasgn *)a)->s);
                 struct expl *cabExp = (((struct symasgn *)a)->l);
@@ -572,6 +602,9 @@ tData eval(struct ast *a){
                     }
 
                     struct symbol *s = define_symbol(cabIdd->name);
+                    if(s->ref){
+                        s = s->ref;
+                    }
                     s->value = val;
 
                     Left = val; 
@@ -588,6 +621,9 @@ tData eval(struct ast *a){
                 if (active_sym == NULL) {
                     printf("Error: Variable '%s' is not defined in the current scope.\n", ref->name);
                     exit(1);
+                }
+                if (active_sym->ref) {
+                    active_sym = active_sym->ref;
                 }
                 if (active_sym->value) {
                     ret = active_sym->value; 

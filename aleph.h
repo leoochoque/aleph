@@ -1,7 +1,6 @@
 #include "tpt/tData.h"
 
 extern int mode;
-/* Tabla de símbolos */
 
 #define NHASH 101
 
@@ -9,6 +8,7 @@ struct symbol{
     char *name;
     tData value;
     struct symbol *next; // Para colisiones en la hash
+    struct symbol *ref; 
 };
 
 typedef struct Env{
@@ -91,6 +91,7 @@ struct ast *newasgn(struct syml *li, struct expl *le);
 #define DOT_OP 1035
 #define FUNCDEF 1036
 #define IFTERN 1037
+#define GLOBALDECL 1038
 
 struct ast{
     int nodetype;
@@ -179,6 +180,7 @@ struct ast *newcall(struct ast *func, struct expl *explist);
 struct ast *newlambda(struct syml *symlist, struct ast * exp);
 struct ast *newfunc(char *name, struct syml * symlist, struct ast *block);
 struct ast *newdotop(struct ast *obj, struct ast *atr, struct ast *val);
+struct ast *newglobal(char *sym);
 void newstruct(char *name, struct syml * params, struct ast * body);
 
 tData callfunc(struct fncall* a);

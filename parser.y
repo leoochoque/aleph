@@ -18,7 +18,7 @@
 %start aleph
 
 %token '+' '-' '*' '/' '=' '{' '}' '[' ']' ',' ';' '%' '\\' ':'
-%token IF ELSE THEN  ENDIF WHILE DO ENDWHILE FOR ENDFOR PRINT PRINTLN EOL POWER SQRT DEF AS END RETURN TOLIST TOSET STRUCT
+%token IF ELSE THEN  ENDIF WHILE DO ENDWHILE FOR ENDFOR PRINT PRINTLN EOL POWER SQRT DEF AS END RETURN TOLIST TOSET STRUCT GLOBAL
 %token <s> STR IDD
 %token <i> NUMBER
 %token <r> BOOLEAN CMP
@@ -73,6 +73,7 @@ sentence: %empty {$$ = NULL;}
         | PRINT exp { $$ = newast(PRINTSTMT, $2, NULL); }
         | PRINTLN exp { $$ = newast(PRINTSTMT, $2, $2); }
         | SETKW exp '[' exp ']' AS exp { $$ = newset($2, $4, $7); }
+        | GLOBAL IDD { $$ = newglobal($2); }
         | exp { if(mode) $$ = newast(PRINTSTMT, $1, NULL); }
         | asign
         | if
