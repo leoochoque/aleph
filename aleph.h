@@ -50,7 +50,7 @@ struct symbol *lookup(char *sym);        // Busca recursivamente hacia arriba
 struct symbol *define_symbol(char *sym); // Crea variable en el entorno ACTUAL
 
 struct ast *newref(char *s);
-struct ast *newasgn(struct syml *li, struct expl *le);
+struct ast *newasgn(int nodetype, struct syml *li, struct expl *le);
 
 //Declaracion de tipos de AST
 #define TSET 1000
@@ -91,6 +91,7 @@ struct ast *newasgn(struct syml *li, struct expl *le);
 #define DOT_OP 1035
 #define FUNCDEF 1036
 #define IFTERN 1037
+#define DECL 1038
 
 struct ast{
     int nodetype;

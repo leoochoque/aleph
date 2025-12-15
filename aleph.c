@@ -34,7 +34,10 @@ struct symbol *define_symbol(char *sym){
     struct symbol *sp = current_env->table[hash];
 
     while(sp != NULL) {
-        if(compara_cad(sp->name, sym) == 0) return sp;
+        if(compara_cad(sp->name, sym) == 0) {
+            printf("Error: Symbol '%s' is already defined in the current scope.\n",sym);
+            exit(1);
+        };
         sp = sp->next;
     }
 
@@ -61,11 +64,11 @@ struct symbol *lookup(char *sym){
     return NULL;
 }
 
-struct ast *newasgn(struct syml *li, struct expl *le){
+struct ast *newasgn(int nodetype, struct syml *li, struct expl *le){
     struct symasgn *sym = malloc(sizeof(struct symasgn));
     sym->s = li;
     sym->l = le;
-    sym->nodetype = ASGN;
+    sym->nodetype = nodetype;
     return (struct ast *)sym;
 }
 
@@ -555,12 +558,25 @@ tData eval(struct ast *a){
                 }
             }
             break;
-            case ASGN:{
+            case ASGN:
+            case DECL:{
                 struct syml *cabIdd = (((struct symasgn *)a)->s);
                 struct expl *cabExp = (((struct symasgn *)a)->l);
+                struct symbol *s = NULL;
+                tData val = NULL;
                 
                 while(cabIdd!=NULL){
-                    tData val = NULL;
+
+                    if(a->nodetype == DECL){
+                        s = define_symbol(cabIdd->name);
+                    }else if(a->nodetype == ASGN){
+                        s = lookup(cabIdd->name);
+                    }
+                    
+                    if(!s){
+                        printf("Error: Variable '%s' not defined.\n", cabIdd->name);
+                        exit(1);
+                    }
 
                     if (cabExp!=NULL){
                         val = copyData(eval(cabExp->a)); 
@@ -568,15 +584,8 @@ tData eval(struct ast *a){
                         val = copyData(Left); 
                     }
 
-                    struct symbol *s = lookup(cabIdd->name);
-                    
-                    if (s != NULL) {
-                        s->value = val;
-                    } else {
-                        s = define_symbol(cabIdd->name);
-                        s->value = val;
-                    }
-
+                    s->value = val;
+            
                     Left = val; 
                     cabIdd = cabIdd->next;
                     if(cabExp) cabExp = cabExp->next;

@@ -18,7 +18,7 @@
 %start aleph
 
 %token '+' '-' '*' '/' '=' '{' '}' '[' ']' ',' ';' '%' '\\' ':'
-%token IF ELSE THEN  ENDIF WHILE DO ENDWHILE FOR ENDFOR PRINT PRINTLN EOL POWER SQRT DEF AS END RETURN TOLIST TOSET STRUCT
+%token IF ELSE THEN  ENDIF WHILE DO ENDWHILE FOR ENDFOR PRINT PRINTLN EOL POWER SQRT DEF AS END RETURN TOLIST TOSET STRUCT LET
 %token <s> STR IDD
 %token <i> NUMBER
 %token <r> BOOLEAN CMP
@@ -40,7 +40,7 @@
 %left '(' ')' '[' ']'
 %nonassoc UMINUS GET '.' IF ELSE //have to look up
 
-%type <a> exp litSet litList sentence asign if block while for aleph function setComprehension listComprehension  comp_tail_opt structure structBlock structStmt
+%type <a> exp litSet litList sentence asign if block while for aleph function setComprehension listComprehension  comp_tail_opt structure structBlock structStmt declaration
 %type <le> listExp
 %type <ls> listIdd
 
@@ -66,7 +66,7 @@ structBlock: structBlock structStmt ';' { $$ = newast(BLOCK, $1, $2); }
     ;
 
 structStmt: function {$$ = $1;} 
-        | asign {$$ = $1;} ;
+        | declaration {$$ = $1;} ;
 
 sentence: %empty {$$ = NULL;}
         | RETURN exp { $$ = newast(RETURNKEYW, $2, NULL); }
@@ -78,6 +78,7 @@ sentence: %empty {$$ = NULL;}
         | if
         | while
         | for
+        | declaration
         ;
 
 block: block sentence ';' { $$ = newast(BLOCK, $1, $2); }
@@ -94,7 +95,11 @@ if: IF exp THEN block ENDIF { $$ = newflow(IFSTMT, $2, $4, NULL);}
     | IF exp THEN block ELSE block ENDIF { $$ = newflow(IFSTMT, $2, $4, $6); }
     ;
 
-asign: listIdd '=' listExp { $$ = newasgn($1,$3); }
+declaration: LET listIdd { $$ = newasgn(DECL,$2,NULL); }
+    | LET listIdd '=' listExp { $$ = newasgn(DECL,$2,$4); }
+    ;
+
+asign: listIdd '=' listExp { $$ = newasgn(ASGN,$1,$3); }
     | exp '[' exp ']' '=' exp { $$ = newset($1,$3,$6); }
     | exp '.' IDD '=' exp { $$ = newdotop($1, newref($3), $5); }
     ;
