@@ -119,6 +119,8 @@ tData INCLUDE(tData d1,tData d2);
 
 tData CONCATA(tData A,tData B);
 
+tData TAILA(tData A);
+
 int isTrue(tData A);
 
 tData REPLACE(tData A, tData pos, tData B);

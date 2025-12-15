@@ -80,6 +80,7 @@ BLOCKCOMMENT "{-"([^\}]|\}[^-])*"-\}"
 "toset" {return TOSET;}
 "global" {return GLOBAL;}
 "concat" {return CONCAT;}
+"tail" {return TAIL;}
 "null" {return NULLISH;}
 {ID} { yylval.s = devuelve_cad(yytext); return IDD; }
 {NUMBER} {yylval.i = atoi(yytext);return NUMBER; }

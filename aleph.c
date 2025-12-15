@@ -449,6 +449,18 @@ tData eval(struct ast *a){
                 }     
             }   
             break;
+            case TAILOP:{
+                Left = eval(a->l);
+                if(returnType(Left) == LIST){
+                    if (!isEmpty(Left)) 
+                        ret = TAILA(Left);
+                    else{
+                        yyerror("Error: Tail from empty list\n");
+                        exit(1);
+                    }
+                }
+            }
+            break;
             case TO_SET:{
                 Left= eval(a->l);
                 if(returnType(Left) == LIST|| returnType(Left) == SET){

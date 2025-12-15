@@ -544,6 +544,18 @@ int CARDINAL(tData s){
 	return c;
 }
 
+tData TAILA(tData A){
+	tData C = NULL;
+	if(returnType(A)==LIST){
+		C = copyData(A);
+		C = C->next;
+		if(!C){
+			C = newData(devuelve_cad("[]"));
+		}
+	}
+	return C;
+}
+
 tData CONCATA(tData A,tData B){
 	tData C = NULL;
 	tData aux = NULL;

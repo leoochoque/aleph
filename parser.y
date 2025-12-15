@@ -18,7 +18,7 @@
 %start aleph
 
 %token '+' '-' '*' '/' '=' '{' '}' '[' ']' ',' ';' '%' '\\' ':'
-%token IF ELSE THEN  ENDIF WHILE DO ENDWHILE FOR ENDFOR PRINT PRINTLN EOL POWER SQRT DEF AS END RETURN TOLIST TOSET STRUCT GLOBAL NULLISH CONCAT
+%token IF ELSE THEN  ENDIF WHILE DO ENDWHILE FOR ENDFOR PRINT PRINTLN EOL POWER SQRT DEF AS END RETURN TOLIST TOSET STRUCT GLOBAL NULLISH CONCAT TAIL
 %token <s> STR IDD
 %token <i> NUMBER
 %token <r> BOOLEAN CMP
@@ -36,7 +36,7 @@
 %left '+' '-'
 %left '*' '/' '%' DIV
 %right POWER SQRT SIZE
-%nonassoc ADD TO POP PRINT RANGE SETKW
+%nonassoc ADD TO POP PRINT RANGE SETKW TAIL
 %left '(' ')' '[' ']'
 %nonassoc UMINUS GET '.' IF ELSE //have to look up
 
@@ -110,6 +110,7 @@ exp: exp UNION exp { $$ = newast(USET,$1,$3); }
     | POP exp { $$ = newast(PLIST,$2,NULL); }
     | SIZE exp { $$ = newast(SIZEOP,$2,NULL); }
     | GET exp { $$ = $2;} //sugar syntax compatibilidad con versiones anteriores
+    | TAIL exp { $$ = newast(TAILOP,$2,NULL); }
     | exp IN exp { $$ = newast(INOP,$1,$3); }
     | exp CONTAINS exp { $$ = newast(CONTOP,$1,$3); }
     | exp CMP exp { $$ = newast($2,$1,$3); }
