@@ -117,6 +117,8 @@ tData COMPDATA(int type, tData A, tData B);
 
 tData INCLUDE(tData d1,tData d2);
 
+tData CONCATA(tData A,tData B);
+
 int isTrue(tData A);
 
 tData REPLACE(tData A, tData pos, tData B);

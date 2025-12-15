@@ -334,6 +334,8 @@ tData eval(struct ast *a){
                 if(typeL == SET && typeR == SET){
                     ret = UNIONA(Left, Right);
                     Depurar(ret);
+                }else if(typeL == LIST && typeR == LIST){
+                    ret = CONCATA(Left, Right);
                 }
                 else{
                     yyerror("Error: Expected type set\n");
@@ -576,7 +578,7 @@ tData eval(struct ast *a){
                     printf("Error: Variable '%s' not found in global declaration.\n", ref->name); 
                     exit(1); 
                 }
-                
+
                 current_env = saved_env;
 
                 if(current_env!=global_env){

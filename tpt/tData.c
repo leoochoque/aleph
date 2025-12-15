@@ -544,6 +544,26 @@ int CARDINAL(tData s){
 	return c;
 }
 
+tData CONCATA(tData A,tData B){
+	tData C = NULL;
+	tData aux = NULL;
+	if(returnType(A)==returnType(B)&&returnType(A)==LIST){
+		C = copyData(A);
+		aux = C;
+		
+		while(C->next!=NULL){
+			C = C->next;
+		}
+		if(!isEmpty(B)){
+			while(!isEmpty(B)){
+				ADDOP(C,copyData(B->data));
+				B=B->next;
+			}
+		}
+	}
+	return aux;
+}
+
 tData UNIONA(tData A,tData B){
 	tData C = NULL;
 	tData aux = NULL;

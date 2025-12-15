@@ -18,7 +18,7 @@
 %start aleph
 
 %token '+' '-' '*' '/' '=' '{' '}' '[' ']' ',' ';' '%' '\\' ':'
-%token IF ELSE THEN  ENDIF WHILE DO ENDWHILE FOR ENDFOR PRINT PRINTLN EOL POWER SQRT DEF AS END RETURN TOLIST TOSET STRUCT GLOBAL
+%token IF ELSE THEN  ENDIF WHILE DO ENDWHILE FOR ENDFOR PRINT PRINTLN EOL POWER SQRT DEF AS END RETURN TOLIST TOSET STRUCT GLOBAL NULLISH CONCAT
 %token <s> STR IDD
 %token <i> NUMBER
 %token <r> BOOLEAN CMP
@@ -30,13 +30,13 @@
 %right NOT
 %nonassoc IN CONTAINS
 %nonassoc CMP
-%left SIZE TOLIST TOSET
-%nonassoc ADD TO POP PRINT RANGE SETKW
-%left UNION DIFF INTSC 
+%left TOLIST TOSET
+%left UNION DIFF INTSC CONCAT
 %nonassoc '|'
 %left '+' '-'
 %left '*' '/' '%' DIV
-%right POWER SQRT
+%right POWER SQRT SIZE
+%nonassoc ADD TO POP PRINT RANGE SETKW
 %left '(' ')' '[' ']'
 %nonassoc UMINUS GET '.' IF ELSE //have to look up
 
@@ -103,6 +103,7 @@ asign: listIdd '=' listExp { $$ = newasgn($1,$3); }
 exp: exp UNION exp { $$ = newast(USET,$1,$3); }
     | exp INTSC exp { $$ = newast(ISET,$1,$3); }
     | exp DIFF exp { $$ = newast(DSET,$1,$3); }
+    | exp CONCAT exp { $$ = newast(USET,$1,$3); }
     | ADD exp TO exp { $$ = newast(ADDTO,$2,$4); }
     | exp '[' exp ']' { $$ = newast(GETTER,$1,$3); }
     | RANGE '(' listExp ')' { $$ = newast(RANGEOP,(struct ast*)$3,NULL); }
@@ -142,6 +143,7 @@ exp: exp UNION exp { $$ = newast(USET,$1,$3); }
     | listComprehension
     | setComprehension
     | '\\' listIdd ':' exp { $$ = newlambda($2,$4); }
+    | NULLISH { $$ = NULL; }
     ;
 
 litSet: '{' listExp '}' { $$ = newast(TSET,(struct ast*)$2,NULL); }

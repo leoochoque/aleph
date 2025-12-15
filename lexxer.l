@@ -79,6 +79,8 @@ BLOCKCOMMENT "{-"([^\}]|\}[^-])*"-\}"
 "tolist" {return TOLIST;}
 "toset" {return TOSET;}
 "global" {return GLOBAL;}
+"concat" {return CONCAT;}
+"null" {return NULLISH;}
 {ID} { yylval.s = devuelve_cad(yytext); return IDD; }
 {NUMBER} {yylval.i = atoi(yytext);return NUMBER; }
 {NUMBERFLOAT} {yylval.f = atof(yytext); return NUMBERFLOAT; }
