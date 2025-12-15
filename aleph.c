@@ -220,6 +220,9 @@ tData executeFunction(tData funcData, struct expl* explist){
         new_env->prev = global_env;
         instance->structIns.context = new_env;
 
+        struct symbol *self_sym = define_symbol("self");
+        self_sym->value = instance;
+
         ret_val = instance;
 
         params = funcData->structDef.params;
@@ -568,14 +571,8 @@ tData eval(struct ast *a){
                         val = copyData(Left); 
                     }
 
-                    struct symbol *s = lookup(cabIdd->name);
-                    
-                    if (s != NULL) {
-                        s->value = val;
-                    } else {
-                        s = define_symbol(cabIdd->name);
-                        s->value = val;
-                    }
+                    struct symbol *s = define_symbol(cabIdd->name);
+                    s->value = val;
 
                     Left = val; 
                     cabIdd = cabIdd->next;

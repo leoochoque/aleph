@@ -10,4 +10,5 @@ parser.tab.h
 test.al
 testaleph.al
 test.py
+estructura.al
 *.al

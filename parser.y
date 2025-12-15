@@ -66,7 +66,7 @@ structBlock: structBlock structStmt ';' { $$ = newast(BLOCK, $1, $2); }
     ;
 
 structStmt: function {$$ = $1;} 
-        | asign {$$ = $1;} ;
+        | listIdd '=' listExp { $$ = newasgn($1,$3); }
 
 sentence: %empty {$$ = NULL;}
         | RETURN exp { $$ = newast(RETURNKEYW, $2, NULL); }
