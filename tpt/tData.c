@@ -13,12 +13,18 @@ tData nvo_nodo(int t){
 	nvo->elem = NULL;
 	nvo->function.params = NULL;
 	nvo->function.body = NULL;
+	nvo->function.context = NULL;
+	nvo->structDef.body = NULL;
+	nvo->structDef.name = NULL;
+	nvo->structDef.params = NULL;
+	nvo->structIns.definition = NULL;
+	nvo->structIns.context = NULL;
 	nvo->num = 0;
 	nvo->numf = 0;
 	nvo->boolean = false;
 	return nvo;
 }
-	
+
 void carga_elem(tData nodo, str elem){
 	if(nodo!=NULL&&returnType(nodo)==ELEM){
 		nodo->elem = elem;
@@ -104,6 +110,7 @@ void dataFree(tData *d){
 		free(*d);
 		*d = NULL;
 	}
+	//tener en cuenta en tipo nulo
 }
 
 int cant_nodo_rec(tData cab, int i){
@@ -122,6 +129,10 @@ int cant_nodo(tData cab){
 int isEqual(tData d1, tData d2){
 	int b = -1;
 	tData aux = d2;
+
+    if (returnType(d1) == TNULL && returnType(d2) == TNULL) return 1;
+    if (returnType(d1)== TNULL || returnType(d2) == TNULL) return 0;
+
 	if(((returnType(d1) == returnType(aux)) || (returnType(d1) == NUM && returnType(aux) == FLOAT) || (returnType(d1) == FLOAT && returnType(aux) == NUM)) && cant_nodo(d1)==cant_nodo(aux)){ ///caso base
 		if(returnType(d1)==SET){
 			while(d1!=NULL && b!=0){
@@ -220,16 +231,18 @@ void printData(tData d){
 		}else if(t == FLOAT){
 			printf("%.12lf", d->numf);
 		}else if(t == FUN){
-			printf(" <function> ");
+			printf("<function>");
 		}else if(t == STRCTDEF){
-			printf(" <struct definition> ");
+			printf("<struct definition>");
 		}else if(t == STRCINS){
-			printf(" <struct instance> ");
+			printf("<struct instance>");
 		}else if(t == BOOL){
 			switch(d->boolean){
 				case true: printf("true"); break;
 				default: printf("false");
 			}
+		}else if(t == TNULL){
+			printf("<null>");
 		}
 		while(d!=NULL && t!=ELEM && t!=NUM && t!=BOOL && t!=FLOAT && t!=FUN && t!=STRCTDEF && t!=STRCINS){
 			sig = d->next;
@@ -385,15 +398,17 @@ void copyDataAux(tData O,tData C){
             C->function.body = O->function.body;
 			C->function.context = O->function.context;
         }
-		else if(returnType(O) == STRCTDEF){ ///HACE FALTA COPIAR YA QUE NO SON EXPRESIONES
+		else if(returnType(O) == STRCTDEF){
             C->structDef.name = O->structDef.name;
             C->structDef.params = O->structDef.params;
             C->structDef.body = O->structDef.body;
         }
-        else if(returnType(O) == STRCINS){ ///HACE FALTA COPIAR YA QUE NO SON EXPRESIONES
+        else if(returnType(O) == STRCINS){
             C->structIns.definition = O->structIns.definition;
             C->structIns.context = O->structIns.context;
-        }
+        }else if(returnType(O) == TNULL){
+			C = newNull();
+		}
 		else{
 			C->data=nvo_nodo(returnType(O->data));
 			copyDataAux(O->data,C->data);
@@ -947,4 +962,10 @@ tData REPLACE(tData A, tData pos, tData B){
 		runner->data = copyData(B);
 	}
 	return ret;
+}
+
+tData newNull(){
+	static struct dataType THE_NULL;
+	THE_NULL.nodeType = TNULL;
+	return &THE_NULL;
 }

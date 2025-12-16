@@ -301,7 +301,7 @@ tData eval(struct ast *a){
                 Right = eval(a->r);
                 typeL = returnType(Left);
                 typeR = returnType(Right);
-                if(typeL==typeR || (typeL==FLOAT && typeR == NUM) || (typeL==NUM && typeR == FLOAT)){
+                if(typeL==typeR || (typeL==FLOAT && typeR == NUM) || (typeL==NUM && typeR == FLOAT) || (typeL==TNULL || typeR == TNULL) ){
                     ret = COMPDATA(a->nodetype, Left, Right);
                 }else{
                     yyerror("Error: Invalid comparation different types\n");
@@ -494,6 +494,10 @@ tData eval(struct ast *a){
             case TBOOL:{
                 ret = nvo_nodo(BOOL);
                 ret->boolean = ((struct boolean *)a)->boolean;
+            }
+            break;
+            case TYPNULL:{
+                ret = newNull();
             }
             break;
             case '+':{

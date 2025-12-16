@@ -144,7 +144,7 @@ exp: exp UNION exp { $$ = newast(USET,$1,$3); }
     | listComprehension
     | setComprehension
     | '\\' listIdd ':' exp { $$ = newlambda($2,$4); }
-    | NULLISH { $$ = NULL; }
+    | NULLISH { $$ = newast(TYPNULL,NULL,NULL); }
     ;
 
 litSet: '{' listExp '}' { $$ = newast(TSET,(struct ast*)$2,NULL); }

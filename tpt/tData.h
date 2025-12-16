@@ -10,6 +10,7 @@
 #define FUN 7
 #define STRCTDEF 8
 #define STRCINS 9
+#define TNULL 10
 
 #include "Auxiliar.h"
 
@@ -124,5 +125,7 @@ tData TAILA(tData A);
 int isTrue(tData A);
 
 tData REPLACE(tData A, tData pos, tData B);
+
+tData newNull();
 
 #endif

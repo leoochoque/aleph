@@ -93,6 +93,7 @@ struct ast *newasgn(struct syml *li, struct expl *le);
 #define IFTERN 1037
 #define GLOBALDECL 1038
 #define TAILOP 1039
+#define TYPNULL 1040
 
 struct ast{
     int nodetype;
