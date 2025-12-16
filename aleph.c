@@ -227,10 +227,16 @@ tData executeFunction(tData funcData, struct expl* explist){
         new_env->prev = global_env;
         instance->structIns.context = new_env;
 
+        env *saved_env = current_env;
+        current_env = new_env;
+
         struct symbol *self_sym = define_symbol("self");
         self_sym->value = instance;
 
+        current_env = saved_env;
+
         ret_val = instance;
+
 
         params = funcData->structDef.params;
         body = funcData->structDef.body;
