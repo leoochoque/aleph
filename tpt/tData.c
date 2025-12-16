@@ -869,10 +869,15 @@ int isTrue(tData A){
 			ret = A->boolean;
 		}
 		break;
+		case TNULL:{
+			ret = 0;
+		}
+		break;
 		default:
-			ret = false;
+			ret = 0;
 		break;
 	}
+	return ret;
 }
 
 tData RANGEPERUANO(tData INI,tData FIN, tData PASO){
